@@ -77,6 +77,8 @@ def composite_photos(
     photo_diameter: int = 80,
     marker_color: tuple[int, int, int] = (139, 69, 19),
     photo_border_color: tuple[int, int, int] = (255, 255, 255),
+    marker_size: int = 16,
+    border_width: int = 4,
 ) -> Image.Image:
     """Composite photo bubbles or dot markers onto the canvas."""
     result = canvas.copy()
@@ -93,15 +95,17 @@ def composite_photos(
                     str(photo_file),
                     diameter=photo_diameter,
                     border_color=photo_border_color,
+                    border_width=border_width,
                 )
                 # Position bubble above the stop point
+                gap = max(8, photo_diameter // 10)
                 paste_x = cx - bubble.width // 2
-                paste_y = cy - bubble.height - 8
+                paste_y = cy - bubble.height - gap
                 result.paste(bubble, (paste_x, paste_y), bubble)
                 continue
 
         # No photo — draw a dot marker
-        dot = draw_marker_dot(color=marker_color, size=16)
+        dot = draw_marker_dot(color=marker_color, size=marker_size, border_width=max(2, border_width // 2))
         paste_x = cx - dot.width // 2
         paste_y = cy - dot.height // 2
         result.paste(dot, (paste_x, paste_y), dot)
