@@ -104,3 +104,40 @@ async def test_photo_upload_and_delete(client, tmp_data_dir):
     resp = await client.delete(f"/api/v1/trips/{trip_id}/stops/{stop['id']}/photo")
     assert resp.status_code == 204
     assert not thumb.exists()
+
+
+async def test_photo_upload_webp(client, tmp_data_dir):
+    """WebP uploads should be accepted and stored as JPEG."""
+    trip_id = await _create_trip(client)
+    stop = await _add_stop(client, trip_id, "Lisbon", 38.7, -9.1)
+
+    from PIL import Image
+    import io
+    img = Image.new("RGB", (200, 200), "blue")
+    buf = io.BytesIO()
+    img.save(buf, "WEBP")
+    buf.seek(0)
+
+    resp = await client.post(
+        f"/api/v1/trips/{trip_id}/stops/{stop['id']}/photo",
+        files={"file": ("photo.webp", buf, "image/webp")},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["photo_path"] is not None
+
+    # Stored file should be a valid JPEG regardless of input format
+    original = tmp_data_dir / "trips" / trip_id / "photos" / f"{stop['id']}_original.jpg"
+    assert original.exists()
+    opened = Image.open(original)
+    assert opened.format == "JPEG"
+
+
+async def test_photo_upload_unsupported_type_rejected(client, tmp_data_dir):
+    trip_id = await _create_trip(client)
+    stop = await _add_stop(client, trip_id, "Madrid", 40.4, -3.7)
+
+    resp = await client.post(
+        f"/api/v1/trips/{trip_id}/stops/{stop['id']}/photo",
+        files={"file": ("file.pdf", b"%PDF-fake", "application/pdf")},
+    )
+    assert resp.status_code == 415

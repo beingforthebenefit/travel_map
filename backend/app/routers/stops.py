@@ -157,6 +157,13 @@ async def upload_photo(
     if await cursor.fetchone() is None:
         raise HTTPException(status_code=404, detail="Stop not found")
 
+    ACCEPTED_TYPES = {
+        "image/jpeg", "image/png", "image/webp", "image/gif",
+        "image/heic", "image/heif", "image/tiff", "image/bmp",
+    }
+    if file.content_type and file.content_type.lower() not in ACCEPTED_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported image type: {file.content_type}")
+
     data = await file.read()
     max_bytes = settings.max_upload_mb * 1024 * 1024
     if len(data) > max_bytes:
