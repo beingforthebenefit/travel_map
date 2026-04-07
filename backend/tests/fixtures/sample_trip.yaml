@@ -1,0 +1,74 @@
+title: "Spain & Portugal 2026"
+subtitle: "March 22 - April 10"
+style: watercolor
+print_width: 24.0
+print_height: 18.0
+dpi: 300
+stops:
+  - city: Madrid
+    lat: 40.4168
+    lon: -3.7038
+    dates: "Mar 22–24"
+    nights: 2
+    highlight: true
+  - city: Toledo
+    lat: 39.8628
+    lon: -4.0273
+    dates: "Mar 24–25"
+    nights: 1
+    highlight: false
+  - city: Córdoba
+    lat: 37.8882
+    lon: -4.7794
+    dates: "Mar 25–27"
+    nights: 2
+    highlight: false
+  - city: Seville
+    lat: 37.3891
+    lon: -5.9845
+    dates: "Mar 27–29"
+    nights: 2
+    highlight: true
+  - city: Faro
+    lat: 37.0194
+    lon: -7.9322
+    dates: "Mar 29–30"
+    nights: 1
+    highlight: false
+  - city: Lisbon
+    lat: 38.7223
+    lon: -9.1393
+    dates: "Mar 30–Apr 2"
+    nights: 3
+    highlight: true
+  - city: Sintra
+    lat: 38.7998
+    lon: -9.3871
+    dates: "Apr 2–3"
+    nights: 1
+    highlight: false
+  - city: Porto
+    lat: 41.1579
+    lon: -8.6291
+    dates: "Apr 3–5"
+    nights: 2
+    highlight: true
+  - city: Salamanca
+    lat: 40.9688
+    lon: -5.6631
+    dates: "Apr 5–6"
+    nights: 1
+    highlight: false
+  - city: Segovia
+    lat: 40.9429
+    lon: -4.1088
+    dates: "Apr 6–7"
+    nights: 1
+    highlight: false
+  - city: Madrid
+    label: "Madrid (return)"
+    lat: 40.4168
+    lon: -3.7038
+    dates: "Apr 7–10"
+    nights: 3
+    highlight: true

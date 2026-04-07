@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_data:/data
+    environment:
+      - STADIA_API_KEY=${STADIA_API_KEY:-}
+      - DATA_DIR=/data
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-20}
+      - NOMINATIM_USER_AGENT=${NOMINATIM_USER_AGENT:-travel_map/1.0}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  app_data:
