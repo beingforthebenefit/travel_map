@@ -22,7 +22,7 @@ async def fetch_road_waypoints(
         pts = pts + [pts[0]]
 
     coord_str = ";".join(f"{s['lon']},{s['lat']}" for s in pts)
-    url = f"{OSRM_BASE}/{coord_str}?overview=simplified&geometries=geojson"
+    url = f"{OSRM_BASE}/{coord_str}?overview=full&geometries=geojson"
 
     try:
         async with httpx.AsyncClient(timeout=20) as client:

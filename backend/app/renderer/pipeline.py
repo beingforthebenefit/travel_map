@@ -160,6 +160,7 @@ async def generate_map(
     _progress(0.7)
 
     # Stage 7: Place labels
+    photo_diameter = max(60, int(80 * scale))
     canvas = place_labels(
         canvas, render_stops, zoom, origin_px, origin_py,
         text_color=style.label_text_color,
@@ -167,6 +168,7 @@ async def generate_map(
         bg_color=style.label_bg_color,
         city_font_size=max(14, int(18 * scale)),
         dates_font_size=max(11, int(14 * scale)),
+        photo_diameter=photo_diameter,
     )
     _progress(0.8)
 
@@ -267,6 +269,7 @@ async def generate_preview(
         bg_color=style.label_bg_color,
         city_font_size=12,
         dates_font_size=10,
+        photo_diameter=40,
     )
 
     if show_title:

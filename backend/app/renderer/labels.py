@@ -102,6 +102,57 @@ def collision_avoidance(boxes: list[LabelBox], iterations: int = 12, pad: int = 
             break
 
 
+def _label_candidates(
+    cx: int, cy: int,
+    lw: int, lh: int,
+    gap: int,
+    has_photo: bool,
+    photo_diameter: int,
+) -> list[tuple[int, int]]:
+    """Return (lx, ly) candidate positions in preference order.
+
+    For stops with photos (bubble above marker), the bubble occupies the space
+    above cy, so we prefer placing the label beside the bubble first.
+    For dot stops we prefer below, then sides.
+    """
+    if has_photo:
+        photo_gap = max(8, photo_diameter // 10)
+        r = photo_diameter // 2
+        # Vertical centre of the bubble
+        bubble_cy = cy - r - photo_gap
+        bubble_top = cy - photo_diameter - photo_gap
+        bubble_bottom = cy - photo_gap
+
+        return [
+            # Beside the bubble (vertically centred on it)
+            (cx + r + gap,          bubble_cy - lh // 2),   # E of bubble
+            (cx - r - gap - lw,     bubble_cy - lh // 2),   # W of bubble
+            # Beside the bubble, top-aligned with bubble
+            (cx + r + gap,          bubble_top),             # E of bubble, top
+            (cx - r - gap - lw,     bubble_top),             # W of bubble, top
+            # Beside the bubble, bottom-aligned with bubble
+            (cx + r + gap,          bubble_bottom - lh),     # E of bubble, bottom
+            (cx - r - gap - lw,     bubble_bottom - lh),     # W of bubble, bottom
+            # Between bubble bottom and marker
+            (cx - lw // 2,          bubble_bottom + 2),      # S of bubble
+            # Above bubble
+            (cx - lw // 2,          bubble_top - lh - 4),    # N of bubble
+            # Below marker (last resort)
+            (cx - lw // 2,          cy + gap),               # S of marker
+        ]
+    else:
+        return [
+            (cx - lw // 2,     cy + gap),            # S
+            (cx + gap,         cy - lh // 2),        # E
+            (cx - lw - gap,    cy - lh // 2),        # W
+            (cx - lw // 2,     cy - lh - gap),       # N
+            (cx + gap,         cy),                  # SE
+            (cx - lw - gap,    cy),                  # SW
+            (cx + gap,         cy - lh),             # NE
+            (cx - lw - gap,    cy - lh),             # NW
+        ]
+
+
 def place_labels(
     canvas: Image.Image,
     stops: list[dict],
@@ -114,14 +165,41 @@ def place_labels(
     city_font_size: int = 18,
     dates_font_size: int = 14,
     bg_opacity: float = 0.78,
+    photo_diameter: int = 80,
 ) -> Image.Image:
-    """Place city labels on the canvas with collision avoidance."""
+    """Place city labels with greedy candidate placement + light collision avoidance.
+
+    Greedy pass: for each stop, try candidate positions in preference order and
+    pick the first that doesn't overlap already-placed labels or photo bubbles.
+    A light collision-avoidance pass then resolves any remaining overlaps.
+    """
     result = canvas.copy()
     bg_with_opacity = (bg_color[0], bg_color[1], bg_color[2], int(255 * bg_opacity))
+    cw, ch = canvas.size
+    gap = max(14, city_font_size)
 
-    # Render all labels and compute positions
+    # Pre-compute stop canvas positions
+    positions: list[tuple[int, int]] = []
+    for stop in stops:
+        px, py = lat_lon_to_pixel(stop["lat"], stop["lon"], zoom)
+        positions.append((int(px - origin_px), int(py - origin_py)))
+
+    # Build fixed obstacle boxes for photo bubbles (not moveable)
+    photo_gap = max(8, photo_diameter // 10)
+    obstacles: list[LabelBox] = []
+    for i, stop in enumerate(stops):
+        if stop.get("photo_path"):
+            cx, cy = positions[i]
+            r = photo_diameter // 2
+            obstacles.append(LabelBox(
+                x=cx - r, y=cy - photo_diameter - photo_gap,
+                width=photo_diameter, height=photo_diameter + photo_gap,
+                stop_index=-1,
+            ))
+
+    # Greedy label placement
+    placed_boxes: list[LabelBox] = []
     labels: list[tuple[Image.Image, LabelBox]] = []
-    marker_offset = max(20, city_font_size)  # scale offset with font size
 
     for i, stop in enumerate(stops):
         display_name = stop.get("label") or stop["city"]
@@ -133,24 +211,36 @@ def place_labels(
             accent_color=accent_color,
             bg_color=bg_with_opacity,
         )
-        px, py = lat_lon_to_pixel(stop["lat"], stop["lon"], zoom)
-        cx = int(px - origin_px)
-        cy = int(py - origin_py)
+        lw, lh = label_img.size
+        cx, cy = positions[i]
+        has_photo = bool(stop.get("photo_path"))
 
-        # Default: label below marker; min_y prevents collision avoidance from
-        # pushing the label up into the photo bubble above the marker
-        lx = cx - label_img.width // 2
-        ly = cy + marker_offset
+        all_obstacles = obstacles + placed_boxes
+        chosen: tuple[int, int] | None = None
 
-        box = LabelBox(x=lx, y=ly, width=label_img.width, height=label_img.height,
-                       stop_index=i, min_y=cy)
+        for lx, ly in _label_candidates(cx, cy, lw, lh, gap, has_photo, photo_diameter):
+            # Skip if entirely off-canvas
+            if lx + lw <= 0 or lx >= cw or ly + lh <= 0 or ly >= ch:
+                continue
+            candidate = LabelBox(x=lx, y=ly, width=lw, height=lh, stop_index=i)
+            if not any(_overlaps(candidate, obs, pad=4) for obs in all_obstacles):
+                chosen = (lx, ly)
+                break
+
+        if chosen is None:
+            # Fallback: use first candidate regardless of overlaps
+            cands = _label_candidates(cx, cy, lw, lh, gap, has_photo, photo_diameter)
+            chosen = cands[0]
+
+        lx, ly = chosen
+        box = LabelBox(x=lx, y=ly, width=lw, height=lh, stop_index=i,
+                       min_y=cy if has_photo else 0)
+        placed_boxes.append(box)
         labels.append((label_img, box))
 
-    # Run collision avoidance
-    boxes = [b for _, b in labels]
-    collision_avoidance(boxes, pad=max(8, city_font_size // 2))
+    # Light collision avoidance pass for any remaining label-label overlaps
+    collision_avoidance(placed_boxes, iterations=6, pad=max(4, city_font_size // 4))
 
-    # Paste labels
     for label_img, box in labels:
         result.paste(label_img, (box.x, box.y), label_img)
 

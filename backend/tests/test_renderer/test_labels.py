@@ -1,5 +1,8 @@
 import pytest
-from app.renderer.labels import collision_avoidance, LabelBox, render_label, compute_banner_height
+from app.renderer.labels import (
+    collision_avoidance, LabelBox, render_label, compute_banner_height,
+    _label_candidates,
+)
 
 
 def test_collision_avoidance_overlapping():
@@ -84,3 +87,30 @@ def test_compute_banner_height_scales_with_font():
     h_small = compute_banner_height("Title", "Sub", title_font_size=24, subtitle_font_size=14)
     h_large = compute_banner_height("Title", "Sub", title_font_size=96, subtitle_font_size=48)
     assert h_large > h_small
+
+
+# --- _label_candidates ---
+
+def test_candidates_with_photo_prefer_sides_over_below():
+    """For a photo stop, E/W of bubble should appear before S of marker."""
+    cands = _label_candidates(cx=400, cy=400, lw=80, lh=40,
+                              gap=16, has_photo=True, photo_diameter=80)
+    xs = [lx for lx, _ in cands]
+    # First two candidates should be to the right or left (not centred on cx)
+    assert xs[0] != 400 - 80 // 2  # not centred → beside the bubble
+
+
+def test_candidates_without_photo_prefer_below():
+    """For a dot stop, first candidate should be directly below the marker."""
+    cands = _label_candidates(cx=400, cy=400, lw=80, lh=40,
+                              gap=16, has_photo=False, photo_diameter=80)
+    lx, ly = cands[0]
+    # Should be centred horizontally and below cy
+    assert lx == 400 - 40   # cx - lw//2
+    assert ly > 400          # below marker
+
+
+def test_candidates_returns_at_least_four():
+    for has_photo in (True, False):
+        cands = _label_candidates(400, 400, 80, 40, 16, has_photo, 80)
+        assert len(cands) >= 4
