@@ -40,8 +40,12 @@ def lat_lon_to_pixel(lat: float, lon: float, zoom: int) -> tuple[float, float]:
     return px, py
 
 
-def compute_bounds(stops: list[dict], padding_pct: float = 0.15) -> BBox:
-    """Compute bounding box from stops with padding."""
+def compute_bounds(stops: list[dict], padding_pct: float = 0.25) -> BBox:
+    """Compute bounding box from stops with padding.
+
+    The 25% padding ensures photo bubbles (above stops) and labels (below)
+    aren't clipped at canvas edges.
+    """
     lats = [s["lat"] for s in stops]
     lons = [s["lon"] for s in stops]
     min_lat, max_lat = min(lats), max(lats)

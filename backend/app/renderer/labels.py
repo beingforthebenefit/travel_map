@@ -23,11 +23,12 @@ def render_label(
     text_color: tuple[int, int, int] = (30, 30, 30),
     accent_color: tuple[int, int, int] = (139, 69, 19),
     bg_color: tuple[int, int, int, int] = (255, 255, 255, 200),
-    padding: int = 8,
 ) -> Image.Image:
     """Render a city label with name and dates on a semi-transparent background pill."""
     city_font = get_title_font(city_font_size)
     dates_font = get_body_font(dates_font_size)
+    # Scale padding with font size so labels look right at high DPI
+    padding = max(8, city_font_size // 2)
 
     # Measure text
     temp = Image.new("RGBA", (1, 1))
@@ -42,7 +43,7 @@ def render_label(
 
     label_w = max(city_w, dates_w) + padding * 2
     label_h = city_h + dates_h + padding * 3
-    radius = min(12, label_h // 3)
+    radius = min(max(12, city_font_size // 2), label_h // 3)
 
     # Create label image
     label = Image.new("RGBA", (label_w, label_h), (0, 0, 0, 0))
@@ -69,18 +70,30 @@ def render_label(
     return label
 
 
-def collision_avoidance(boxes: list[LabelBox], iterations: int = 3, pad: int = 8):
-    """Nudge overlapping labels apart vertically."""
+def _overlaps(a: LabelBox, b: LabelBox, pad: int = 4) -> bool:
+    return (a.x - pad < b.x + b.width and a.x + a.width + pad > b.x and
+            a.y - pad < b.y + b.height and a.y + a.height + pad > b.y)
+
+
+def collision_avoidance(boxes: list[LabelBox], iterations: int = 12, pad: int = 8):
+    """Nudge overlapping labels apart bidirectionally."""
     for _ in range(iterations):
+        moved = False
         for i in range(len(boxes)):
             for j in range(i + 1, len(boxes)):
                 a, b = boxes[i], boxes[j]
-                # Check overlap
-                if (a.x < b.x + b.width and a.x + a.width > b.x and
-                        a.y < b.y + b.height and a.y + a.height > b.y):
-                    overlap = (a.y + a.height) - b.y + pad
-                    if overlap > 0:
-                        b.y += overlap
+                if not _overlaps(a, b, pad):
+                    continue
+                # Compute vertical overlap amount
+                overlap_y = min(a.y + a.height, b.y + b.height) - max(a.y, b.y) + pad
+                if overlap_y > 0:
+                    # Push apart in both directions (half each)
+                    shift = (overlap_y + 1) // 2
+                    a.y -= shift
+                    b.y += shift
+                    moved = True
+        if not moved:
+            break
 
 
 def place_labels(
@@ -102,6 +115,8 @@ def place_labels(
 
     # Render all labels and compute positions
     labels: list[tuple[Image.Image, LabelBox]] = []
+    marker_offset = max(20, city_font_size)  # scale offset with font size
+
     for i, stop in enumerate(stops):
         display_name = stop.get("label") or stop["city"]
         label_img = render_label(
@@ -116,16 +131,16 @@ def place_labels(
         cx = int(px - origin_px)
         cy = int(py - origin_py)
 
-        # Default: label below marker
+        # Default: label below and right of marker
         lx = cx - label_img.width // 2
-        ly = cy + 20  # offset below marker
+        ly = cy + marker_offset
 
         box = LabelBox(x=lx, y=ly, width=label_img.width, height=label_img.height, stop_index=i)
         labels.append((label_img, box))
 
     # Run collision avoidance
     boxes = [b for _, b in labels]
-    collision_avoidance(boxes)
+    collision_avoidance(boxes, pad=max(8, city_font_size // 2))
 
     # Paste labels
     for label_img, box in labels:
@@ -161,7 +176,9 @@ def render_title_banner(
         sub_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
         sub_h = sub_bbox[3] - sub_bbox[1]
 
-    banner_h = title_h + sub_h + 60  # padding
+    v_pad = max(16, title_font_size // 3)
+    gap = max(12, title_font_size // 4)
+    banner_h = title_h + sub_h + v_pad * 2 + gap
     banner = Image.new("RGBA", (w, banner_h), banner_bg)
     draw = ImageDraw.Draw(banner)
 
@@ -169,7 +186,7 @@ def render_title_banner(
     title_bbox = draw.textbbox((0, 0), title, font=title_font)
     title_w = title_bbox[2] - title_bbox[0]
     draw.text(
-        ((w - title_w) // 2, 16),
+        ((w - title_w) // 2, v_pad),
         title, font=title_font, fill=(*text_color, 255),
     )
 
@@ -177,7 +194,7 @@ def render_title_banner(
         sub_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
         sub_w = sub_bbox[2] - sub_bbox[0]
         draw.text(
-            ((w - sub_w) // 2, 16 + title_h + 12),
+            ((w - sub_w) // 2, v_pad + title_h + gap),
             subtitle, font=subtitle_font, fill=(*text_color, 180),
         )
 
