@@ -17,6 +17,7 @@ def draw_route(
     shadow_color: tuple[int, int, int, int] = (0, 0, 0, 60),
     line_style: str = "solid",
     line_weight: float = 3.0,
+    loop: bool = False,
 ) -> Image.Image:
     """Draw route path on canvas using PyCairo."""
     if len(stops) < 2:
@@ -29,6 +30,10 @@ def draw_route(
     for stop in stops:
         px, py = lat_lon_to_pixel(stop["lat"], stop["lon"], zoom)
         points.append((px - origin_px, py - origin_py))
+
+    # Close the loop by connecting last stop back to first
+    if loop and len(points) >= 2:
+        points.append(points[0])
 
     # Create Cairo surface from numpy array
     arr = np.array(canvas.convert("RGBA"))

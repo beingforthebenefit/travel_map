@@ -39,6 +39,7 @@ async def init_db():
                 print_height  REAL DEFAULT 18.0,
                 dpi           INTEGER DEFAULT 300,
                 show_title    INTEGER DEFAULT 1,
+                loop_route    INTEGER DEFAULT 0,
                 api_key_ref   TEXT DEFAULT NULL
             );
 
@@ -63,6 +64,13 @@ async def init_db():
             );
             """
         )
+        # Migrations for existing databases
+        try:
+            await db.execute("ALTER TABLE trips ADD COLUMN loop_route INTEGER DEFAULT 0")
+            await db.commit()
+        except Exception:
+            pass  # Column already exists
+
         await db.commit()
     finally:
         await db.close()

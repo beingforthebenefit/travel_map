@@ -16,6 +16,7 @@ L.Icon.Default.mergeOptions({
 interface Props {
   stops: Stop[];
   style: string;
+  loopRoute?: boolean;
 }
 
 function FitBounds({ stops }: { stops: Stop[] }) {
@@ -48,7 +49,7 @@ function createNumberedIcon(n: number, highlight: boolean) {
   });
 }
 
-export function MapPanel({ stops, style }: Props) {
+export function MapPanel({ stops, style, loopRoute }: Props) {
   const tileUrl = TILE_URLS[style] ?? TILE_URLS["positron"]!;
 
   return (
@@ -76,14 +77,11 @@ export function MapPanel({ stops, style }: Props) {
           </Popup>
         </Marker>
       ))}
-      {stops.length >= 2 && (
-        <Polyline
-          positions={stops.map((s) => [s.lat, s.lon])}
-          color="#3b82f6"
-          weight={3}
-          opacity={0.7}
-        />
-      )}
+      {stops.length >= 2 && (() => {
+        const pts: [number, number][] = stops.map((s) => [s.lat, s.lon]);
+        if (loopRoute) pts.push(pts[0]!);
+        return <Polyline positions={pts} color="#3b82f6" weight={3} opacity={0.7} />;
+      })()}
     </MapContainer>
   );
 }

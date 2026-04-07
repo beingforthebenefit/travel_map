@@ -111,6 +111,9 @@ export const uploadPhoto = async (tripId: string, stopId: string, file: File) =>
 export const deletePhoto = (tripId: string, stopId: string) =>
   request<void>(`/trips/${tripId}/stops/${stopId}/photo`, { method: "DELETE" });
 
+export const getPhotoThumbUrl = (tripId: string, stopId: string) =>
+  `${BASE}/trips/${tripId}/stops/${stopId}/photo/thumb`;
+
 // Render
 export const startRender = (
   tripId: string,

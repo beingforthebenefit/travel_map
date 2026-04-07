@@ -29,6 +29,7 @@ async def create_trip(body: TripCreate, db: aiosqlite.Connection = Depends(_get_
     trip = await trip_service.create_trip(db, body.title, body.subtitle)
     trip["stops"] = []
     trip["show_title"] = bool(trip["show_title"])
+    trip["loop_route"] = bool(trip.get("loop_route", 0))
     return trip
 
 
@@ -38,6 +39,7 @@ async def get_trip(trip_id: str, db: aiosqlite.Connection = Depends(_get_db)):
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
     trip["show_title"] = bool(trip["show_title"])
+    trip["loop_route"] = bool(trip.get("loop_route", 0))
     for s in trip["stops"]:
         s["highlight"] = bool(s["highlight"])
     return trip
@@ -52,6 +54,7 @@ async def update_trip(
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
     trip["show_title"] = bool(trip["show_title"])
+    trip["loop_route"] = bool(trip.get("loop_route", 0))
     return trip
 
 
@@ -68,6 +71,7 @@ async def duplicate_trip(trip_id: str, db: aiosqlite.Connection = Depends(_get_d
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
     trip["show_title"] = bool(trip["show_title"])
+    trip["loop_route"] = bool(trip.get("loop_route", 0))
     for s in trip["stops"]:
         s["highlight"] = bool(s["highlight"])
     return trip
@@ -78,6 +82,7 @@ async def import_trip(file: UploadFile = File(...), db: aiosqlite.Connection = D
     content = await file.read()
     trip = await trip_service.import_trip_yaml(db, content.decode("utf-8"))
     trip["show_title"] = bool(trip["show_title"])
+    trip["loop_route"] = bool(trip.get("loop_route", 0))
     for s in trip["stops"]:
         s["highlight"] = bool(s["highlight"])
     return trip

@@ -9,6 +9,7 @@ export interface Trip {
   print_height: number;
   dpi: number;
   show_title: boolean;
+  loop_route: boolean;
   api_key_ref: string | null;
 }
 

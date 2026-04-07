@@ -160,6 +160,7 @@ export function TripEditor() {
           <MapPanel
             stops={trip.stops}
             style={trip.style}
+            loopRoute={trip.loop_route}
           />
         </div>
 

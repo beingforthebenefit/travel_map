@@ -52,11 +52,13 @@ async def generate_map(
     _progress(0.5)
 
     # Stage 5: Draw route
+    loop = bool(trip.get("loop_route", 0))
     canvas = draw_route(
         canvas, stops, zoom, origin_px, origin_py,
         route_color=style.route_color,
         shadow_color=style.route_shadow_color,
         line_weight=max(2.0, 3.0 * scale),
+        loop=loop,
     )
     _progress(0.6)
 
@@ -139,11 +141,13 @@ async def generate_preview(
         api_key=api_key,
     )
 
+    loop = bool(trip.get("loop_route", 0))
     canvas = draw_route(
         canvas, stops, zoom, origin_px, origin_py,
         route_color=style.route_color,
         shadow_color=style.route_shadow_color,
         line_weight=2.0,
+        loop=loop,
     )
 
     canvas = composite_photos(

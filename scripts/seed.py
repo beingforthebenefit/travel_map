@@ -24,14 +24,14 @@ def main():
 
     db.execute(
         """INSERT INTO trips (id, title, subtitle, created_at, updated_at, style,
-           print_width, print_height, dpi)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           print_width, print_height, dpi, loop_route)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (trip_id, "Spain & Portugal 2026", "March 22 – April 10", now, now,
-         "watercolor", 24.0, 18.0, 300),
+         "watercolor", 24.0, 18.0, 300, 1),
     )
 
     stops = [
-        ("Madrid", None, 40.4168, -3.7038, "Mar 22–24", 2, True),
+        ("Madrid", None, 40.4168, -3.7038, "Mar 22–24 / Apr 7–10", 5, True),
         ("Toledo", None, 39.8628, -4.0273, "Mar 24–25", 1, False),
         ("Córdoba", None, 37.8882, -4.7794, "Mar 25–27", 2, False),
         ("Seville", None, 37.3891, -5.9845, "Mar 27–29", 2, True),
@@ -41,7 +41,6 @@ def main():
         ("Porto", None, 41.1579, -8.6291, "Apr 3–5", 2, True),
         ("Salamanca", None, 40.9688, -5.6631, "Apr 5–6", 1, False),
         ("Segovia", None, 40.9429, -4.1088, "Apr 6–7", 1, False),
-        ("Madrid", "Madrid (return)", 40.4168, -3.7038, "Apr 7–10", 3, True),
     ]
 
     for i, (city, label, lat, lon, dates, nights, highlight) in enumerate(stops):

@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import FileResponse
 
 import aiosqlite
 
@@ -187,3 +188,11 @@ async def delete_photo(
     await photo_service.delete_photo(trip_id, stop_id)
     await db.execute("UPDATE stops SET photo_path = NULL WHERE id = ?", (stop_id,))
     await db.commit()
+
+
+@router.get("/{stop_id}/photo/thumb")
+async def get_photo_thumbnail(trip_id: str, stop_id: str):
+    path = photo_service.get_photo_path(trip_id, stop_id, thumbnail=True)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    return FileResponse(str(path), media_type="image/jpeg")

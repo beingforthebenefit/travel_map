@@ -102,6 +102,20 @@ export function SettingsDrawer({ open, onClose }: Props) {
           />
         </section>
 
+        {/* Route */}
+        <section>
+          <h3 className="text-sm font-semibold mb-3">Route</h3>
+          <label className="flex items-center gap-2 text-sm mb-2">
+            <input
+              type="checkbox"
+              checked={trip.loop_route}
+              onChange={(e) => updateTrip({ loop_route: e.target.checked })}
+              className="rounded"
+            />
+            Loop route (connect last stop back to first)
+          </label>
+        </section>
+
         {/* Title */}
         <section>
           <h3 className="text-sm font-semibold mb-3">Title Banner</h3>

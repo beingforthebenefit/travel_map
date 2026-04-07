@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Stop } from "../lib/types";
 import { useTripStore } from "../stores/tripStore";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { getPhotoThumbUrl } from "../api/client";
 
 interface Props {
   stop: Stop;
@@ -78,7 +79,11 @@ export function StopRow({ stop, index }: Props) {
           title={stop.photo_path ? "Replace photo" : "Add photo"}
         >
           {stop.photo_path ? (
-            <span className="text-xs text-green-600">img</span>
+            <img
+              src={getPhotoThumbUrl(stop.trip_id, stop.id)}
+              alt={stop.city}
+              className="w-full h-full object-cover rounded-full"
+            />
           ) : (
             <span className="text-gray-400 text-lg">+</span>
           )}

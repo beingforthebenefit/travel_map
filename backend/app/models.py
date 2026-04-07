@@ -16,6 +16,7 @@ class TripUpdate(BaseModel):
     print_height: float | None = None
     dpi: int | None = None
     show_title: bool | None = None
+    loop_route: bool | None = None
     api_key_ref: str | None = None
 
 
@@ -30,6 +31,7 @@ class Trip(BaseModel):
     print_height: float
     dpi: int
     show_title: bool
+    loop_route: bool
     api_key_ref: str | None
 
 
