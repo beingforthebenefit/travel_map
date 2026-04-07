@@ -155,8 +155,8 @@ export function TripEditor() {
 
       {/* Two-panel layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Map */}
-        <div className="flex-1 relative">
+        {/* Left: Map — isolate stacking context so Leaflet z-indices stay contained */}
+        <div className="flex-1 relative z-0 isolate">
           <MapPanel
             stops={trip.stops}
             style={trip.style}

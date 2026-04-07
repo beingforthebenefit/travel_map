@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Keep Leaflet map below fixed overlays (drawers, modals) */
+.leaflet-container {
+  z-index: 0;
+}
