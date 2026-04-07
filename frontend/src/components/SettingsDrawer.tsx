@@ -114,6 +114,24 @@ export function SettingsDrawer({ open, onClose }: Props) {
             />
             Loop route (connect last stop back to first)
           </label>
+          <div className="mt-3">
+            <p className="text-xs text-gray-500 mb-2">Path style</p>
+            <div className="flex gap-2">
+              {(["straight", "roads"] as const).map((rt) => (
+                <button
+                  key={rt}
+                  onClick={() => updateTrip({ route_type: rt })}
+                  className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                    trip.route_type === rt
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400"
+                  }`}
+                >
+                  {rt === "straight" ? "Straight lines" : "Follow roads"}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Title */}

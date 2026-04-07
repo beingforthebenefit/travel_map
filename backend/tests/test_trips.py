@@ -70,6 +70,38 @@ async def test_duplicate_trip(client):
     assert dup["id"] != trip_id
 
 
+async def test_trip_has_route_type_field(client):
+    resp = await client.post("/api/v1/trips", json={"title": "Route test"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["route_type"] == "straight"
+
+
+async def test_update_route_type(client):
+    create = await client.post("/api/v1/trips", json={"title": "Route test"})
+    trip_id = create.json()["id"]
+    resp = await client.put(f"/api/v1/trips/{trip_id}", json={"route_type": "roads"})
+    assert resp.status_code == 200
+    assert resp.json()["route_type"] == "roads"
+
+
+async def test_update_route_type_invalid_is_ignored(client):
+    create = await client.post("/api/v1/trips", json={"title": "Route test"})
+    trip_id = create.json()["id"]
+    # Update with invalid value — should be silently ignored, value stays "straight"
+    resp = await client.put(f"/api/v1/trips/{trip_id}", json={"route_type": "teleport"})
+    assert resp.status_code == 200
+    assert resp.json()["route_type"] == "straight"
+
+
+async def test_road_route_endpoint_no_stops_returns_error(client):
+    create = await client.post("/api/v1/trips", json={"title": "Empty"})
+    trip_id = create.json()["id"]
+    # With no stops, routing service returns None → 502
+    resp = await client.get(f"/api/v1/trips/{trip_id}/road-route")
+    assert resp.status_code == 502
+
+
 async def test_import_export_roundtrip(client):
     fixture = Path(__file__).parent / "fixtures" / "sample_trip.yaml"
     with open(fixture, "rb") as f:

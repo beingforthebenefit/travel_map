@@ -18,22 +18,33 @@ def draw_route(
     line_style: str = "solid",
     line_weight: float = 3.0,
     loop: bool = False,
+    waypoints: list[tuple[float, float]] | None = None,
 ) -> Image.Image:
-    """Draw route path on canvas using PyCairo."""
+    """Draw route path on canvas using PyCairo.
+
+    If `waypoints` is provided (list of (lat, lon) tuples from a road router),
+    those are used instead of straight lines between stops.
+    """
     if len(stops) < 2:
         return canvas
 
     w, h = canvas.size
 
-    # Convert stops to pixel coordinates on the canvas
-    points = []
-    for stop in stops:
-        px, py = lat_lon_to_pixel(stop["lat"], stop["lon"], zoom)
-        points.append((px - origin_px, py - origin_py))
-
-    # Close the loop by connecting last stop back to first
-    if loop and len(points) >= 2:
-        points.append(points[0])
+    if waypoints:
+        # Road route: convert each (lat, lon) waypoint to canvas pixels
+        points = []
+        for lat, lon in waypoints:
+            px, py = lat_lon_to_pixel(lat, lon, zoom)
+            points.append((px - origin_px, py - origin_py))
+    else:
+        # Straight lines between stops
+        points = []
+        for stop in stops:
+            px, py = lat_lon_to_pixel(stop["lat"], stop["lon"], zoom)
+            points.append((px - origin_px, py - origin_py))
+        # Close the loop by connecting last stop back to first
+        if loop and len(points) >= 2:
+            points.append(points[0])
 
     # Create Cairo surface from numpy array
     arr = np.array(canvas.convert("RGBA"))

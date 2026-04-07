@@ -30,6 +30,7 @@ async def create_trip(body: TripCreate, db: aiosqlite.Connection = Depends(_get_
     trip["stops"] = []
     trip["show_title"] = bool(trip["show_title"])
     trip["loop_route"] = bool(trip.get("loop_route", 0))
+    trip["route_type"] = trip.get("route_type") or "straight"
     return trip
 
 
@@ -40,6 +41,7 @@ async def get_trip(trip_id: str, db: aiosqlite.Connection = Depends(_get_db)):
         raise HTTPException(status_code=404, detail="Trip not found")
     trip["show_title"] = bool(trip["show_title"])
     trip["loop_route"] = bool(trip.get("loop_route", 0))
+    trip["route_type"] = trip.get("route_type") or "straight"
     for s in trip["stops"]:
         s["highlight"] = bool(s["highlight"])
     return trip
@@ -55,6 +57,7 @@ async def update_trip(
         raise HTTPException(status_code=404, detail="Trip not found")
     trip["show_title"] = bool(trip["show_title"])
     trip["loop_route"] = bool(trip.get("loop_route", 0))
+    trip["route_type"] = trip.get("route_type") or "straight"
     return trip
 
 
@@ -72,6 +75,7 @@ async def duplicate_trip(trip_id: str, db: aiosqlite.Connection = Depends(_get_d
         raise HTTPException(status_code=404, detail="Trip not found")
     trip["show_title"] = bool(trip["show_title"])
     trip["loop_route"] = bool(trip.get("loop_route", 0))
+    trip["route_type"] = trip.get("route_type") or "straight"
     for s in trip["stops"]:
         s["highlight"] = bool(s["highlight"])
     return trip
@@ -83,9 +87,25 @@ async def import_trip(file: UploadFile = File(...), db: aiosqlite.Connection = D
     trip = await trip_service.import_trip_yaml(db, content.decode("utf-8"))
     trip["show_title"] = bool(trip["show_title"])
     trip["loop_route"] = bool(trip.get("loop_route", 0))
+    trip["route_type"] = trip.get("route_type") or "straight"
     for s in trip["stops"]:
         s["highlight"] = bool(s["highlight"])
     return trip
+
+
+@router.get("/{trip_id}/road-route")
+async def get_road_route(trip_id: str, db: aiosqlite.Connection = Depends(_get_db)):
+    """Return road-following waypoints [[lat, lon], ...] for use in map previews."""
+    from app.services import routing_service
+    trip = await trip_service.get_trip_with_stops(db, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    stops = trip.get("stops", [])
+    loop = bool(trip.get("loop_route", 0))
+    coords = await routing_service.fetch_road_waypoints_geojson(stops, loop=loop)
+    if coords is None:
+        raise HTTPException(status_code=502, detail="Road routing unavailable")
+    return {"coordinates": coords}
 
 
 @router.get("/{trip_id}/export")

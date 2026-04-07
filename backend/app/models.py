@@ -17,6 +17,7 @@ class TripUpdate(BaseModel):
     dpi: int | None = None
     show_title: bool | None = None
     loop_route: bool | None = None
+    route_type: str | None = None  # "straight" | "roads"
     api_key_ref: str | None = None
 
 
@@ -32,6 +33,7 @@ class Trip(BaseModel):
     dpi: int
     show_title: bool
     loop_route: bool
+    route_type: str
     api_key_ref: str | None
 
 

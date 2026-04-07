@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap, Popup } from "react-leaflet";
 import L from "leaflet";
 import type { Stop } from "../lib/types";
 import { TILE_URLS } from "../lib/constants";
+import { getRoadRoute } from "../api/client";
 import "leaflet/dist/leaflet.css";
 
 // Fix default marker icons in webpack/vite
@@ -17,6 +18,8 @@ interface Props {
   stops: Stop[];
   style: string;
   loopRoute?: boolean;
+  routeType?: "straight" | "roads";
+  tripId?: string;
 }
 
 function FitBounds({ stops }: { stops: Stop[] }) {
@@ -49,8 +52,19 @@ function createNumberedIcon(n: number, highlight: boolean) {
   });
 }
 
-export function MapPanel({ stops, style, loopRoute }: Props) {
+export function MapPanel({ stops, style, loopRoute, routeType, tripId }: Props) {
   const tileUrl = TILE_URLS[style] ?? TILE_URLS["positron"]!;
+  const [roadCoords, setRoadCoords] = useState<[number, number][] | null>(null);
+
+  useEffect(() => {
+    if (routeType !== "roads" || !tripId || stops.length < 2) {
+      setRoadCoords(null);
+      return;
+    }
+    getRoadRoute(tripId)
+      .then((data) => setRoadCoords(data.coordinates as [number, number][]))
+      .catch(() => setRoadCoords(null));
+  }, [routeType, tripId, stops]);
 
   return (
     <MapContainer
@@ -78,9 +92,23 @@ export function MapPanel({ stops, style, loopRoute }: Props) {
         </Marker>
       ))}
       {stops.length >= 2 && (() => {
-        const pts: [number, number][] = stops.map((s) => [s.lat, s.lon]);
-        if (loopRoute) pts.push(pts[0]!);
-        return <Polyline positions={pts} color="#3b82f6" weight={3} opacity={0.7} />;
+        const pts: [number, number][] = roadCoords
+          ? roadCoords
+          : (() => {
+              const p: [number, number][] = stops.map((s) => [s.lat, s.lon]);
+              if (loopRoute) p.push(p[0]!);
+              return p;
+            })();
+        const isRoad = !!roadCoords;
+        return (
+          <Polyline
+            positions={pts}
+            color="#3b82f6"
+            weight={isRoad ? 2 : 3}
+            opacity={0.75}
+            smoothFactor={isRoad ? 2 : 1}
+          />
+        );
       })()}
     </MapContainer>
   );

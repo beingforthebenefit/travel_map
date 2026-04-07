@@ -161,6 +161,8 @@ export function TripEditor() {
             stops={trip.stops}
             style={trip.style}
             loopRoute={trip.loop_route}
+            routeType={trip.route_type}
+            tripId={trip.id}
           />
         </div>
 

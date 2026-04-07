@@ -83,8 +83,16 @@ async def fetch_tile(
     """Fetch a single tile with caching and retry logic."""
     # Check cache
     if cache_dir:
-        # Build a provider name from the URL template
-        provider = url_template.split("/")[2].replace(".", "_")
+        # Build a stable provider key from all path segments before the {z} placeholder
+        # (domain-only would collide for e.g. carto light_all vs dark_all)
+        raw = url_template.split("?")[0]  # drop query string
+        parts = [p for p in raw.split("/") if p]
+        key_parts = []
+        for p in parts:
+            if "{z}" in p or p == "{z}":
+                break
+            key_parts.append(p)
+        provider = "_".join(key_parts).replace(".", "_").replace("-", "_")
         cache_path = cache_dir / provider / str(z) / str(x) / f"{y}.png"
         if cache_path.exists():
             return Image.open(cache_path).convert("RGBA")
@@ -126,6 +134,7 @@ async def fetch_and_stitch_tiles(
     url_template: str,
     api_key: str = "",
     progress_callback=None,
+    top_margin: int = 0,
 ) -> tuple[Image.Image, int, float, float]:
     """Fetch tiles and stitch them into a canvas.
 
@@ -139,11 +148,13 @@ async def fetch_and_stitch_tiles(
     min_px, min_py = lat_lon_to_pixel(bbox.max_lat, bbox.min_lon, zoom)
     max_px, max_py = lat_lon_to_pixel(bbox.min_lat, bbox.max_lon, zoom)
 
-    # Center the content in the canvas
+    # Center the content in the canvas, shifting down by half of top_margin
+    # so the title banner doesn't overlap map content
     content_w = max_px - min_px
     content_h = max_py - min_py
     origin_px = min_px - (canvas_width - content_w) / 2
-    origin_py = min_py - (canvas_height - content_h) / 2
+    # Subtract top_margin/2 to shift map content down, leaving room for the banner
+    origin_py = min_py - (canvas_height - content_h) / 2 - top_margin / 2
 
     # Determine tile range
     tile_x_start = int(origin_px // TILE_SIZE)

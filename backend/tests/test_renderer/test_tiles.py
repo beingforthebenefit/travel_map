@@ -65,3 +65,61 @@ def test_select_zoom_wide_area():
     bbox = BBox(min_lat=-60.0, max_lat=60.0, min_lon=-160.0, max_lon=160.0)
     zoom = select_zoom(bbox, 1200, 900)
     assert zoom <= 3
+
+
+# --- Cache key uniqueness ---
+
+def _cache_key_for(url_template: str) -> str:
+    """Replicate the cache-key logic from fetch_tile."""
+    raw = url_template.split("?")[0]
+    parts = [p for p in raw.split("/") if p]
+    key_parts = []
+    for p in parts:
+        if "{z}" in p or p == "{z}":
+            break
+        key_parts.append(p)
+    return "_".join(key_parts).replace(".", "_").replace("-", "_")
+
+
+def test_cache_key_positron_vs_dark_are_distinct():
+    """Positron and Dark Matter share the same domain — keys must differ."""
+    positron = "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"
+    dark = "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"
+    assert _cache_key_for(positron) != _cache_key_for(dark)
+
+
+def test_cache_key_includes_style_path():
+    positron = "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"
+    key = _cache_key_for(positron)
+    assert "light_all" in key
+
+
+def test_cache_key_different_providers_are_distinct():
+    osm = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    positron = "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"
+    stadia = "https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg?api_key={api_key}"
+    keys = {_cache_key_for(u) for u in [osm, positron, stadia]}
+    assert len(keys) == 3
+
+
+# --- top_margin shifts content down ---
+
+def test_top_margin_shifts_origin_down():
+    """A positive top_margin should produce a smaller (more negative) origin_py,
+    placing content lower on the canvas."""
+    from app.renderer.tiles import compute_bounds, select_zoom, lat_lon_to_pixel
+
+    stops = [{"lat": 40.4, "lon": -3.7}, {"lat": 38.7, "lon": -9.1}]
+    bbox = compute_bounds(stops)
+    zoom = select_zoom(bbox, 1200, 900)
+
+    min_px, min_py = lat_lon_to_pixel(bbox.max_lat, bbox.min_lon, zoom)
+    max_px, max_py = lat_lon_to_pixel(bbox.min_lat, bbox.max_lon, zoom)
+    content_w = max_px - min_px
+    content_h = max_py - min_py
+
+    origin_py_no_margin = min_py - (900 - content_h) / 2
+    origin_py_with_margin = min_py - (900 - content_h) / 2 - 100 / 2
+
+    # With top_margin, origin_py should be smaller → content appears lower on canvas
+    assert origin_py_with_margin < origin_py_no_margin

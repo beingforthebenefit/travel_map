@@ -10,6 +10,7 @@ export interface Trip {
   dpi: number;
   show_title: boolean;
   loop_route: boolean;
+  route_type: "straight" | "roads";
   api_key_ref: string | null;
 }
 

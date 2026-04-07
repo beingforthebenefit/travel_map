@@ -87,6 +87,8 @@ async def update_trip(db: aiosqlite.Connection, trip_id: str, updates: dict) -> 
         if value is not None:
             if key in ("show_title", "loop_route"):
                 value = int(value)
+            elif key == "route_type" and value not in ("straight", "roads"):
+                continue  # ignore unknown values
             fields.append(f"{key} = ?")
             values.append(value)
     if fields:
@@ -122,8 +124,8 @@ async def duplicate_trip(db: aiosqlite.Connection, trip_id: str) -> dict | None:
     now = _now()
     await db.execute(
         """INSERT INTO trips (id, title, subtitle, created_at, updated_at, style,
-           print_width, print_height, dpi, show_title, loop_route, api_key_ref)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           print_width, print_height, dpi, show_title, loop_route, route_type, api_key_ref)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             new_trip_id,
             f"{trip['title']} (copy)",
@@ -136,6 +138,7 @@ async def duplicate_trip(db: aiosqlite.Connection, trip_id: str) -> dict | None:
             trip["dpi"],
             trip["show_title"],
             trip.get("loop_route", 0),
+            trip.get("route_type", "straight"),
             trip["api_key_ref"],
         ),
     )
@@ -176,6 +179,7 @@ async def export_trip_yaml(db: aiosqlite.Connection, trip_id: str) -> str | None
         "print_height": trip["print_height"],
         "dpi": trip["dpi"],
         "loop_route": bool(trip.get("loop_route", 0)),
+        "route_type": trip.get("route_type", "straight"),
         "stops": [
             {
                 "city": s["city"],

@@ -13,6 +13,7 @@ class LabelBox:
     width: int
     height: int
     stop_index: int
+    min_y: int = 0  # label cannot be pushed above this y coordinate
 
 
 def render_label(
@@ -76,7 +77,7 @@ def _overlaps(a: LabelBox, b: LabelBox, pad: int = 4) -> bool:
 
 
 def collision_avoidance(boxes: list[LabelBox], iterations: int = 12, pad: int = 8):
-    """Nudge overlapping labels apart bidirectionally."""
+    """Nudge overlapping labels apart bidirectionally, respecting each label's min_y floor."""
     for _ in range(iterations):
         moved = False
         for i in range(len(boxes)):
@@ -87,10 +88,15 @@ def collision_avoidance(boxes: list[LabelBox], iterations: int = 12, pad: int = 
                 # Compute vertical overlap amount
                 overlap_y = min(a.y + a.height, b.y + b.height) - max(a.y, b.y) + pad
                 if overlap_y > 0:
-                    # Push apart in both directions (half each)
+                    # Push apart in both directions (half each), but respect min_y
                     shift = (overlap_y + 1) // 2
-                    a.y -= shift
-                    b.y += shift
+                    new_ay = a.y - shift
+                    if new_ay < a.min_y:
+                        # a can't go up — push b down by the full amount instead
+                        b.y += overlap_y
+                    else:
+                        a.y = new_ay
+                        b.y += shift
                     moved = True
         if not moved:
             break
@@ -131,11 +137,13 @@ def place_labels(
         cx = int(px - origin_px)
         cy = int(py - origin_py)
 
-        # Default: label below and right of marker
+        # Default: label below marker; min_y prevents collision avoidance from
+        # pushing the label up into the photo bubble above the marker
         lx = cx - label_img.width // 2
         ly = cy + marker_offset
 
-        box = LabelBox(x=lx, y=ly, width=label_img.width, height=label_img.height, stop_index=i)
+        box = LabelBox(x=lx, y=ly, width=label_img.width, height=label_img.height,
+                       stop_index=i, min_y=cy)
         labels.append((label_img, box))
 
     # Run collision avoidance
@@ -147,6 +155,28 @@ def place_labels(
         result.paste(label_img, (box.x, box.y), label_img)
 
     return result
+
+
+def compute_banner_height(
+    title: str,
+    subtitle: str = "",
+    title_font_size: int = 48,
+    subtitle_font_size: int = 24,
+) -> int:
+    """Compute the pixel height of the title banner without rendering it."""
+    title_font = get_title_font(title_font_size)
+    subtitle_font = get_body_font(subtitle_font_size)
+    temp = Image.new("RGBA", (1, 1))
+    draw = ImageDraw.Draw(temp)
+    title_bbox = draw.textbbox((0, 0), title, font=title_font)
+    title_h = title_bbox[3] - title_bbox[1]
+    sub_h = 0
+    if subtitle:
+        sub_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
+        sub_h = sub_bbox[3] - sub_bbox[1]
+    v_pad = max(16, title_font_size // 3)
+    gap = max(12, title_font_size // 4)
+    return title_h + sub_h + v_pad * 2 + gap
 
 
 def render_title_banner(

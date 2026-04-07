@@ -114,6 +114,9 @@ export const deletePhoto = (tripId: string, stopId: string) =>
 export const getPhotoThumbUrl = (tripId: string, stopId: string) =>
   `${BASE}/trips/${tripId}/stops/${stopId}/photo/thumb`;
 
+export const getRoadRoute = (tripId: string) =>
+  request<{ coordinates: [number, number][] }>(`/trips/${tripId}/road-route`);
+
 // Render
 export const startRender = (
   tripId: string,

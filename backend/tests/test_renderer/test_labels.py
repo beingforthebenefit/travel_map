@@ -1,5 +1,5 @@
 import pytest
-from app.renderer.labels import collision_avoidance, LabelBox, render_label
+from app.renderer.labels import collision_avoidance, LabelBox, render_label, compute_banner_height
 
 
 def test_collision_avoidance_overlapping():
@@ -41,3 +41,46 @@ def test_render_label_produces_image():
     assert label.mode == "RGBA"
     assert label.width > 0
     assert label.height > 0
+
+
+# --- min_y floor ---
+
+def test_collision_avoidance_respects_min_y():
+    """A label with min_y should not be pushed above that floor."""
+    boxes = [
+        LabelBox(x=100, y=200, width=80, height=40, stop_index=0, min_y=200),
+        LabelBox(x=100, y=210, width=80, height=40, stop_index=1, min_y=210),
+    ]
+    collision_avoidance(boxes)
+    assert boxes[0].y >= 200
+    assert boxes[1].y >= 210
+
+
+def test_collision_avoidance_min_y_pushes_other_down():
+    """When a has min_y and can't move up, the full overlap is pushed onto b."""
+    a = LabelBox(x=0, y=100, width=100, height=40, stop_index=0, min_y=100)
+    b = LabelBox(x=0, y=120, width=100, height=40, stop_index=1, min_y=0)
+    collision_avoidance([a, b], pad=0)
+    # a must not go above 100
+    assert a.y >= 100
+    # b must be pushed down so there's no overlap
+    assert b.y >= a.y + a.height
+
+
+# --- compute_banner_height ---
+
+def test_compute_banner_height_positive():
+    h = compute_banner_height("Spain & Portugal 2026", "March 22 – April 10")
+    assert h > 0
+
+
+def test_compute_banner_height_no_subtitle():
+    h_with = compute_banner_height("Title", "Subtitle")
+    h_without = compute_banner_height("Title", "")
+    assert h_with > h_without
+
+
+def test_compute_banner_height_scales_with_font():
+    h_small = compute_banner_height("Title", "Sub", title_font_size=24, subtitle_font_size=14)
+    h_large = compute_banner_height("Title", "Sub", title_font_size=96, subtitle_font_size=48)
+    assert h_large > h_small

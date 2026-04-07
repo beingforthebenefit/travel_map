@@ -40,6 +40,7 @@ async def init_db():
                 dpi           INTEGER DEFAULT 300,
                 show_title    INTEGER DEFAULT 1,
                 loop_route    INTEGER DEFAULT 0,
+                route_type    TEXT DEFAULT 'straight',
                 api_key_ref   TEXT DEFAULT NULL
             );
 
@@ -65,11 +66,15 @@ async def init_db():
             """
         )
         # Migrations for existing databases
-        try:
-            await db.execute("ALTER TABLE trips ADD COLUMN loop_route INTEGER DEFAULT 0")
-            await db.commit()
-        except Exception:
-            pass  # Column already exists
+        for migration in [
+            "ALTER TABLE trips ADD COLUMN loop_route INTEGER DEFAULT 0",
+            "ALTER TABLE trips ADD COLUMN route_type TEXT DEFAULT 'straight'",
+        ]:
+            try:
+                await db.execute(migration)
+                await db.commit()
+            except Exception:
+                pass  # Column already exists
 
         await db.commit()
     finally:
